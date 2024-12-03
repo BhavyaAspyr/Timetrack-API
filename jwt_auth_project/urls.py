@@ -22,6 +22,7 @@ from django.urls import path, include
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('authapp.urls')),  # Include authapp URLs
-    path('api/', include('timetrack.urls'))
+    path('api/', include('timetrack.urls')),
+    path('api/', include('searchapp.urls')),
 ]
 

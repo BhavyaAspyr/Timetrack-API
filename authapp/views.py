@@ -100,7 +100,7 @@ class AuthenticateView(APIView):
             if check_password(usr_pass, password):
                 print('Authenticated')
                 # Generate JWT token if authentication is successful
-                payload = {'login': usr_id}
+                payload = {'login': usr_id, 'password': password}
                 token = jwt.encode(payload, settings.SECRET_KEY, algorithm='HS256')
                 #strore token to cookies
                 #access token and refreshed tokens
