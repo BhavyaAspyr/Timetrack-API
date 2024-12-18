@@ -7,15 +7,22 @@ from .authenticate import authenticate_request
 from datetime import datetime, timedelta
 from contextlib import contextmanager
 from psycopg import connect
+from rest_framework.decorators import permission_classes
+from rest_framework.permissions import IsAuthenticated
+from urllib.parse import urlparse
+from dotenv import load_dotenv
+import os
+load_dotenv('.env')
 
 def get_db_connection():
     """Establish and return a database connection."""
+    DB_CONN = urlparse(os.environ["DATABASE_URL"])
     return connect(
-        dbname='users',
-        user='postgres',
-        password='Aspyr12345!',
-        host='localhost',
-        port='5432'
+        dbname=DB_CONN.path[1:],
+        user=DB_CONN.username,
+        password=DB_CONN.password,
+        host=DB_CONN.hostname,
+        port=DB_CONN.port
     )
 
 
@@ -36,6 +43,7 @@ def db_cursor():
 
 
 @csrf_exempt
+@permission_classes([IsAuthenticated])
 def insert_time_data(request):
     if request.method == 'POST':
         # Parse the incoming JSON data
@@ -310,81 +318,6 @@ def is_valid_filter(selected_filter: str) -> bool:
     allowed_filters = ["tmt_customers", "tmt_project", "tmt_resource_role"]  # Add all valid columns
     return selected_filter in allowed_filters
 
-# @csrf_exempt
-# def search_filter(request):
-#     if request.method == 'POST':
-#         try:
-#             data = json.loads(request.body)
-#         except json.JSONDecodeError:
-#             return JsonResponse({'status': 'error', 'message': 'Invalid JSON input.'})
-
-#         # Extract input parameters
-#         resource = data.get('resource', '').strip()
-        
-#         # Validate required parameters
-#         if not resource :
-#             return JsonResponse({
-#                 'status': 'error',
-#                 'message': 'Resource is required.'
-#             })
-        
-        
-
-#         # Validate filter
-#         if not is_valid_filter(selected_filter):
-#             return JsonResponse({'status': 'error', 'message': 'Invalid filter name.'})
-
-#         print(f"Selected Filter: {selected_filter}, Search Term: {search_term}")
-
-
-#         try:
-#             # Connect to the database
-#             conn = psycopg.connect(
-#                 dbname='users',
-#                 user='postgres',
-#                 password='Aspyr12345!',
-#                 host='localhost',
-#                 port='5432'
-#             )
-#             cursor = conn.cursor()
-
-#             # Construct query with dynamic column name
-#             query = f"""
-#             SELECT tmt_resource, tmt_date, tmt_customers, tmt_project, tmt_resource_role, tmt_hours,tmt_id
-#             FROM op_time_timetrack
-#             WHERE tmt_resource = %s AND {selected_filter} ILIKE %s;
-#             """
-
-#             cursor.execute(query, [resource, f'%{search_term}%'])
-
-#             # Fetch results
-#             rows = cursor.fetchall()
-
-#             # Format results
-#             results = []
-#             for row in rows:
-#                 result = {
-#                     'tmt_resource': row[0],
-#                     'tmt_date': row[1],
-#                     'tmt_customer': row[2],
-#                     'tmt_project': row[3],
-#                     'tmt_role': row[4],
-#                     'tmt_hours': row[5],
-#                 }
-#                 results.append(result)
-
-#             # Close the database connection
-#             cursor.close()
-#             conn.close()
-
-#             return JsonResponse({'status': 'success', 'data': results})
-
-#         except Exception as e:
-#             return JsonResponse({'status': 'error', 'message': f'Error occurred: {str(e)}'})
-
-#     else:
-#         return JsonResponse({'status': 'error', 'message': 'Invalid HTTP method. Only POST is allowed.'})
-
 
 @csrf_exempt
 def search_filter(request):
@@ -466,4 +399,35 @@ def search_filter(request):
 
     else:
         return JsonResponse({'status': 'error', 'message': 'Invalid HTTP method. Only POST is allowed.'})
+
+
+
+@csrf_exempt
+def get_users(request):
+    """Fetch a list of usernames from the 'credentials' table."""
+    if request.method == 'GET':
+        try:
+            with db_cursor() as cursor:
+                # Execute the query to fetch usernames
+                cursor.execute("""
+                    SELECT username FROM credentials;
+                """)
+
+                # Fetch all rows from the executed query
+                rows = cursor.fetchall()
+
+                # Extract usernames from the rows
+                usernames = [row[0] for row in rows]
+
+            return JsonResponse({'status': 'success', 'usernames': usernames})
+
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)})
+
+    return JsonResponse({'status': 'error', 'message': 'Invalid HTTP method.'})
+
+
+
+
+
 

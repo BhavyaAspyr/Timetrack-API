@@ -11,7 +11,10 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
 from pathlib import Path
-
+import os
+from dotenv import load_dotenv
+from urllib.parse import urlparse
+load_dotenv('.env')
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -25,7 +28,7 @@ SECRET_KEY = 'Aspyr12345'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["192.168.1.54", '127.0.0.1']
 
 
 # Application definition
@@ -76,15 +79,15 @@ WSGI_APPLICATION = 'jwt_auth_project.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
-
+DB_CONN = urlparse(os.environ["DATABASE_URL"])
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': 'users',
-        'USER': 'postgres',
-        'PASSWORD': 'Aspyr12345!',
-        'HOST': 'localhost',
-        'PORT': '5432'
+    "default": {
+        "NAME": DB_CONN.path[1:],
+        "ENGINE": DB_CONN.scheme,
+        "USER": DB_CONN.username,
+        "PASSWORD": DB_CONN.password,
+        "HOST": DB_CONN.hostname,
+        "PORT": DB_CONN.port,
     }
 }
 
@@ -135,4 +138,15 @@ CORS_ALLOW_ALL_ORIGINS = True  # or CORS_ORIGIN_ALLOW_ALL = True
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:8000",  # Replace with the frontend domain
     "http://127.0.0.1:8000",  # Another example
+    "http://192.168.1.54:8000",  
 ]
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.TokenAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+}

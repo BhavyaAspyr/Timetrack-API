@@ -8,7 +8,10 @@ from rest_framework import status
 from django.contrib.auth.hashers import make_password, check_password
 import jwt
 from django.conf import settings
-
+import os
+from urllib.parse import urlparse
+from dotenv import load_dotenv
+load_dotenv('.env')
 # authapp/views.py
 
 from rest_framework.views import APIView
@@ -16,8 +19,9 @@ from rest_framework.response import Response
 from rest_framework import status
 import psycopg  # PostgreSQL driver (if not installed, use `pip install psycopg[binary]`)
 from django.conf import settings
-
-
+from rest_framework.decorators import permission_classes
+from rest_framework.permissions import  AllowAny
+@permission_classes([AllowAny])
 class SignupView(APIView):
     def post(self, request):
         # Extract data from the request body
@@ -37,12 +41,13 @@ class SignupView(APIView):
 
         try:
             # Connect to the PostgreSQL database
+            DB_CONN = urlparse(os.environ["DATABASE_URL"])
             connection = psycopg.connect(
-                dbname='users', 
-                user='postgres',  # Replace with your DB username
-                password='Aspyr12345!',  # Replace with your DB password
-                host='localhost',  # Adjust if different
-                port='5432'  # Adjust if using a different port
+                dbname=DB_CONN.path[1:],
+                user=DB_CONN.username,
+                password=DB_CONN.password,
+                host=DB_CONN.hostname,
+                port=DB_CONN.port
             )
             cursor = connection.cursor()
 
@@ -65,7 +70,7 @@ class SignupView(APIView):
                 cursor.close()
                 connection.close()
 
-
+@permission_classes([AllowAny])
 class AuthenticateView(APIView):
     def post(self, request):
         # Extract usr_id and usr_pass from the request body
@@ -79,22 +84,23 @@ class AuthenticateView(APIView):
 
         try:
             # Connect to the PostgreSQL database
+            DB_CONN = urlparse(os.environ["DATABASE_URL"])
             connection = psycopg.connect(
-                dbname='users', 
-                user='postgres',  # Replace with your DB username
-                password='Aspyr12345!',  # Replace with your DB password
-                host='localhost',  # Adjust if different
-                port='5432'  # Adjust if using a different port
+                dbname=DB_CONN.path[1:],
+                user=DB_CONN.username,
+                password=DB_CONN.password,
+                host=DB_CONN.hostname,
+                port=DB_CONN.port
             )
             cursor = connection.cursor()
 
             cursor.execute("""
-            SELECT password, username
+            SELECT password, username, role
             FROM credentials
             WHERE email = %s
             """, (usr_id,))
 
-            password, username = cursor.fetchone()
+            password, username, resource_role = cursor.fetchone()
             print(cursor.fetchone())
 
             if check_password(usr_pass, password):
@@ -104,7 +110,7 @@ class AuthenticateView(APIView):
                 token = jwt.encode(payload, settings.SECRET_KEY, algorithm='HS256')
                 #strore token to cookies
                 #access token and refreshed tokens
-                return Response({'message': 'Authenticated successfully', 'token': token, 'resource':username, "status": 200}, status=200)
+                return Response({'message': 'Authenticated successfully', 'token': token, 'resource':username, "resource_role":resource_role, "status": 200}, status=200)
             else:
                 return Response({'error': 'Invalid usr_id or usr_pass'}, status=401)
 

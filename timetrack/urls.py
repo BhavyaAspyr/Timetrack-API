@@ -11,5 +11,6 @@ urlpatterns = [
     path('get-projects-by-company/', views.get_projects_by_company, name='get_projects_by_company'),
     path('delete-time-log/', views.delete_time_log, name='delete_time_log'),
     path('search/', views.search_filter, name='search'),
+    path('get_users/', views.get_users, name='get_users'),
     # path('advanced-search/', views.advanced_search, name='advanced_search'),
 ]
